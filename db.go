@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/zencoder/ddbsync/models"
+	"github.com/rgarcia/ddbsync/models"
 )
 
 type database struct {
