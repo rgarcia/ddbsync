@@ -26,6 +26,13 @@ func NewDatabase(tableName string, region string, endpoint string, disableSSL bo
 	}
 }
 
+func NewDatabaseWithConfig(tableName string, config *aws.Config) DBer {
+	return &database{
+		client:    dynamodb.New(config),
+		tableName: tableName,
+	}
+}
+
 var _ DBer = (*database)(nil) // Forces compile time checking of the interface
 
 var _ AWSDynamoer = (*dynamodb.DynamoDB)(nil) // Forces compile time checking of the interface
