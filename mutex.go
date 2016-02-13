@@ -19,6 +19,7 @@ type Mutex struct {
 	Name string
 	TTL  int64
 	db   DBer
+	Tick time.Duration
 }
 
 var _ sync.Locker = (*Mutex)(nil) // Forces compile time checking of the interface
@@ -29,6 +30,7 @@ func NewMutex(name string, ttl int64, db DBer) *Mutex {
 		Name: name,
 		TTL:  ttl,
 		db:   db,
+		Tick: 1 * time.Second,
 	}
 }
 
@@ -36,7 +38,7 @@ func NewMutex(name string, ttl int64, db DBer) *Mutex {
 // Before writing the lock, we will clear any locks that are expired.
 // Calling this function will block until a lock can be acquired.
 func (m *Mutex) Lock() {
-	for {
+	for _ = range time.Tick(m.Tick) {
 		m.PruneExpired()
 		err := m.db.Put(m.Name, time.Now().Unix())
 		if err == nil {
@@ -47,7 +49,7 @@ func (m *Mutex) Lock() {
 
 // Unlock will delete an item in a DynamoDB table.
 func (m *Mutex) Unlock() {
-	for {
+	for _ = range time.Tick(m.Tick) {
 		err := m.db.Delete(m.Name)
 		if err == nil {
 			return
