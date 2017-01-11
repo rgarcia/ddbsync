@@ -9,6 +9,7 @@ package ddbsync
 
 import (
 	"log"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -16,10 +17,11 @@ import (
 // A Mutex is a mutual exclusion lock.
 // Mutexes can be created as part of other structures.
 type Mutex struct {
-	Name string
-	TTL  int64
-	db   DBer
-	Tick time.Duration
+	Name         string
+	TTL          int64
+	db           DBer
+	lowerBoundMs int
+	upperBoundMs int
 }
 
 var _ sync.Locker = (*Mutex)(nil) // Forces compile time checking of the interface
@@ -27,10 +29,11 @@ var _ sync.Locker = (*Mutex)(nil) // Forces compile time checking of the interfa
 // Mutex constructor
 func NewMutex(name string, ttl int64, db DBer) *Mutex {
 	return &Mutex{
-		Name: name,
-		TTL:  ttl,
-		db:   db,
-		Tick: 1 * time.Second,
+		Name:         name,
+		TTL:          ttl,
+		db:           db,
+		lowerBoundMs: 200,
+		upperBoundMs: 500,
 	}
 }
 
@@ -38,7 +41,10 @@ func NewMutex(name string, ttl int64, db DBer) *Mutex {
 // Before writing the lock, we will clear any locks that are expired.
 // Calling this function will block until a lock can be acquired.
 func (m *Mutex) Lock() {
-	for _ = range time.Tick(m.Tick) {
+	var sleepTime time.Duration
+	for {
+		sleepTime = time.Duration(rand.Intn(m.upperBoundMs-m.lowerBoundMs)+m.lowerBoundMs) * time.Millisecond
+		time.Sleep(sleepTime)
 		m.PruneExpired()
 		err := m.db.Put(m.Name, time.Now().Unix())
 		if err == nil {
@@ -49,7 +55,10 @@ func (m *Mutex) Lock() {
 
 // Unlock will delete an item in a DynamoDB table.
 func (m *Mutex) Unlock() {
-	for _ = range time.Tick(m.Tick) {
+	var sleepTime time.Duration
+	for {
+		sleepTime = time.Duration(rand.Intn(m.upperBoundMs-m.lowerBoundMs)+m.lowerBoundMs) * time.Millisecond
+		time.Sleep(sleepTime)
 		err := m.db.Delete(m.Name)
 		if err == nil {
 			return
